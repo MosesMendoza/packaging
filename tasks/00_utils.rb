@@ -23,7 +23,7 @@ def check_var(varname,var=nil)
 end
 
 def check_host(host)
-  unless host == %x{'hostname'}.chomp!
+  unless host == %x{hostname}.chomp!
     STDERR.puts "Requires host to be #{host}...exiting"
     exit 5
   end
@@ -55,7 +55,7 @@ end
 def git_co(dist)
   %x{git reset --hard ; git checkout #{dist}}
   unless $?.success?
-    STDERR.puts 'Could not checkout dist git branch to build package from...exiting'
+    STDERR.puts 'Could not checkout #{dist} git branch to build package from...exiting'
     exit 1
   end
 end
@@ -101,7 +101,7 @@ def get_version
 end
 
 def get_debversion
-  @version.include?("rc") ? @version.sub(/rc[0-9]+/, '-0.1\0') : @version + "-1#{deb_packager}1"
+  @version.include?("rc") ? @version.sub(/rc[0-9]+/, '-0.1\0') : @version + "-1#{@packager}1"
 end
 
 def get_origversion
@@ -127,7 +127,7 @@ end
 
 def gpg_sign_file(file)
    check_tool('gpg')
-   %x{/usr/bin/gpg --armor --detach-sign -u #{@key_id} #{file}}
+   %x{/usr/bin/gpg --armor --detach-sign -u #{@gpg_key} #{file}}
 end
 
 def mkdir_pr *args

@@ -3,6 +3,7 @@ require 'rubygems/package_task'
 require 'rspec/core/rake_task'
 require 'yaml'
 require 'benchmark'
+require 'erb'
 
 @project_specs ||= YAML.load(File.read('ext/project_data.yaml'))
 begin
@@ -27,12 +28,13 @@ begin
   @default_cow    = ENV['COW']          || @pkg_defaults['default_cow']
   @cows           = ENV['COW']          || @pkg_defaults['cows']
   @pbuild_conf    = ENV['PBUILDCONF']   || @pkg_defaults['pbuild_conf']
-  @deb_packager   = ENV['DEB_PACKAGER'] || @pkg_defaults['deb_packager']
-  @sign_srpm      = ENV['SIGN_SRPM']    || @pkg_defaults['sign_srpm']
+  @packager       = ENV['PACKAGER']     || @pkg_defaults['packager']
+  @sign_tar       = ENV['SIGN_TAR']     || @pkg_defaults['sign_tar']
   @final_mocks    = ENV['MOCK']         || @pkg_defaults['final_mocks']
   @rc_mocks       = ENV['MOCK']         || @pkg_defaults['rc_mocks']
   @gpg_name       = ENV['GPG_NAME']     || @pkg_defaults['gpg_name']
   @gpg_key        = ENV['GPG_KEY']      || @pkg_defaults['gpg_key']
+  @build_gem      = ENV['GEM']          || @pkg_defaults['build_gem']
   @version_file   = @pkg_defaults['version_file']
   @yum_host       = @pkg_defaults['yum_host']
   @yum_repo_path  = @pkg_defaults['yum_repo_path']
