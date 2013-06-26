@@ -1,0 +1,32 @@
+
+# bundler
+.bundle
+
+# jeweler generated
+pkg
+
+# test script
+test
+
+# simplecov code coverage directory
+coverage
+
+# Yard doc
+doc
+.yardoc
+#
+Gemfile.lock
+
+# MacOS:
+.DS_Store
+
+# Rubymine
+.idea
+
+# vim, emacs, textmate
+*~
+\#*
+.\#*
+*.tmproj
+tmtags
+*.swp

@@ -1,0 +1,14 @@
+# Test credentials
+
+# Server IP Address
+:server_ip: 127.0.0.1
+# Username
+:username: testuser
+# Password
+:password: testpassword
+# Timeout in seconds
+:timeout: 300
+# Log location
+:log_location: "jenkins_api_client.log"
+# Log level (Logger::DEBUG)
+:log_level: 0

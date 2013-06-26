@@ -1,0 +1,32 @@
+language: ruby
+rvm:
+  - 2.0.0
+  - 1.9.3
+  - jruby-18mode
+  - jruby-19mode
+  - rbx-18mode
+  - rbx-19mode
+  - 1.8.7
+  - ree
+matrix:
+  allow_failures:
+    - rvm: jruby-18mode
+    - rvm: jruby-19mode
+    - rvm: rbx-18mode
+    - rvm: rbx-19mode
+    - rvm: ree
+before_install:
+  - travis/setup.sh
+
+script:
+  - bundle exec rake unit_tests
+  - bundle exec rake func_tests
+  - travis/setup_crumb.sh
+  - bundle exec rake func_tests
+notifications:
+  email: false
+  irc:
+    on_success: change
+    on_failure: always
+    channels:
+      - "irc.freenode.org##jenins-api-client"

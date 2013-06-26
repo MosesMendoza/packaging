@@ -1,0 +1,9 @@
+name: jenkins_api_client_func_tests
+git: git://github.com/arangamani/jenkins_api_client.git
+ref: master
+script:
+ - bundle install
+ - rake unit_tests
+ - rake func_tests
+ notification_email: kannan@rightscale.com
+ notification_email_for_every_unstable: true
