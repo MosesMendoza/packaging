@@ -20,8 +20,6 @@
 # THE SOFTWARE.
 #
 
-require 'logger'
-
 module JenkinsApi
   # This module contains classes that define exceptions for various catories.
   #
@@ -30,9 +28,8 @@ module JenkinsApi
     # RuntimeError.
     #
     class ApiException < RuntimeError
-      def initialize(logger, message = "", log_level = Logger::ERROR)
-        logger.add(log_level) { "#{self.class}: #{message}" }
-        super(message)
+      def initialize(message = "")
+        super("Error: #{message}")
       end
     end
 
@@ -40,142 +37,57 @@ module JenkinsApi
     # but not provided.
     #
     class NothingSubmitted < ApiException
-      def initialize(logger, message = "", log_level = Logger::ERROR)
-        msg = "Nothing is submitted. #{message}"
-        super(logger, msg)
+      def initialize(message = "")
+        super("Nothing is submitted. #{message}")
       end
     end
 
     # This exception class handles cases where a job not able to be created
     # because it already exists.
     #
-    class JobAlreadyExists < ApiException
-      def initialize(logger, message = "", log_level = Logger::ERROR)
-        super(logger, message)
-      end
-    end
-    # Support for backward compatibility
-    JobAlreadyExistsWithName = JobAlreadyExists
-
-    class ViewAlreadyExists < ApiException
-      def initialize(logger, message = "", log_level = Logger::ERROR)
-        super(logger, message)
-      end
-    end
-
-    class NodeAlreadyExists < ApiException
-      def initialize(logger, message = "", log_level = Logger::ERROR)
-        super(logger, message)
+    class JobAlreadyExistsWithName < ApiException
+      def initialize(message = "")
+        super("Job already exists with that name. #{message}")
       end
     end
 
     # This exception class handles cases where invalid credentials are provided
     # to connect to the Jenkins.
     #
-    class Unauthorized < ApiException
-      def initialize(logger, message = "", log_level = Logger::ERROR)
-        msg = "Invalid credentials are provided. #{message}"
-        super(logger, msg, Logger::FATAL)
+    class UnautherizedException < ApiException
+      def initialize(message = "")
+        super("Invalid credentials are provided. #{message}")
       end
     end
-    UnauthorizedException = Unauthorized
-
-    # This exception class handles cases where invalid credentials are provided
-    # to connect to the Jenkins.
-    #
-    class Forbidden < ApiException
-      def initialize(logger, message = "", log_level = Logger::ERROR)
-        msg = "The Crumb was expired or not sent to the server." +
-              " Perhaps the CSRF protection was not enabled on the server" +
-              " when the client was initialized. Please re-initialize the" +
-              " client. #{message}"
-        super(logger, msg)
-      end
-    end
-    # Support for backward compatibility
-    ForbiddenException = Forbidden
 
     # This exception class handles cases where a requested page is not found on
     # the Jenkins API.
     #
-    class NotFound < ApiException
-      def initialize(logger, message = "", log_level = Logger::ERROR)
-        msg = "Requested component is not found on the Jenkins CI server." \
-          if message.empty?
-        super(logger, msg)
-      end
-    end
-    # Support for backward compatibility
-    NotFoundException = NotFound
-
-    # This exception class handles cases where a requested page is not found on
-    # the Jenkins API.
-    #
-    class CrumbNotFound < NotFound
-      def initialize(logger, message = "", log_level = Logger::ERROR)
-        msg = "No crumb available on the server. #{message}"
-        super(logger, msg)
-      end
-    end
-
-    class JobNotFound < NotFound
-      def initialize(logger, message = "", log_level = Logger::ERROR)
-        msg = "The specified job is not found" if message.empty?
-        super(logger, msg)
-      end
-    end
-
-    class ViewNotFound < NotFound
-      def initialize(logger, message = "", log_level = Logger::ERROR)
-        msg = "The specified view is not found" if message.empty?
-        super(logger, msg)
-      end
-    end
-
-    class NodeNotFound < NotFound
-      def initialize(logger, message = "", log_level = Logger::ERROR)
-        msg = "The specified node is not found" if message.empty?
-        super(logger, msg)
+    class NotFoundException < ApiException
+      def initialize(message = "")
+        super("Requested component is not found on the Jenkins CI server." +
+              " #{message}")
       end
     end
 
     # This exception class handles cases where the Jenkins API returns with a
     # 500 Internel Server Error.
     #
-    class InternalServerError < ApiException
-      def initialize(logger, message = "", log_level = Logger::ERROR)
-        msg = "Internel Server Error. Perhaps the in-memory configuration of" +
+    class InternelServerErrorException < ApiException
+      def initialize(message = "")
+        super("Internel Server Error. Perhaps the in-memory configuration of" +
               " Jenkins is different from the disk configuration." +
               " Please try to reload the configuration #{message}"
-        super(logger, msg)
+             )
       end
     end
-    # Support for backward compatibility
-    InternalServerErrorException = InternalServerError
-
-    # This exception class handles cases where the Jenkins is getting restarted
-    # or reloaded where the response code returned is 503
-    #
-    class ServiceUnavailable < ApiException
-      def initialize(logger, message = "", log_level = Logger::ERROR)
-        msg = "Jenkins is being reloaded or restarted. Please wait till" +
-              " Jenkins is completely back online. This can be" +
-              " programatically achieved by System#wait_for_ready #{message}"
-        super(logger, msg)
-      end
-    end
-    # Support for backward compatibility
-    ServiceUnavailableException = ServiceUnavailable
 
     # Exception occurred while running java CLI commands
     #
-    class CLIError < ApiException
-      def initialize(logger, message = "", log_level = Logger::ERROR)
-        msg = "Execute CLI Error. #{message}"
-        super(logger, msg)
+    class CLIException < ApiException
+      def initialize(message = "")
+        super("Execute CLI Error. #{message}")
       end
     end
-    # Support for backward compatibility
-    CLIException = CLIError
   end
 end

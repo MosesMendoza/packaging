@@ -11,13 +11,13 @@ describe JenkinsApi::Client::Job do
     before(:all) do
       @helper = JenkinsApiSpecHelper::Helper.new
       @creds_file = '~/.jenkins_api_client/spec.yml'
-      @creds = YAML.load_file(File.expand_path(@creds_file, __FILE__))
       @job_name_prefix = 'awesome_rspec_test_job'
       @filter = "^#{@job_name_prefix}.*"
       @job_name = ''
-      @valid_post_responses = [200, 201, 302]
       begin
-        @client = JenkinsApi::Client.new(@creds)
+        @client = JenkinsApi::Client.new(
+          YAML.load_file(File.expand_path(@creds_file, __FILE__))
+        )
       rescue Exception => e
         puts "WARNING: Credentials are not set properly."
         puts e.message
@@ -54,66 +54,36 @@ describe JenkinsApi::Client::Job do
         it "Should be able to create a job by getting an xml" do
           xml = @helper.create_job_xml
           name = "qwerty_nonexistent_job"
-          @valid_post_responses.should include(
-            @client.job.create(name, xml).to_i
-          )
+          @client.job.create(name, xml).to_i.should == 200
           @client.job.list(name).include?(name).should be_true
-        end
-        it "Should raise proper exception when the job already exists" do
-          xml = @helper.create_job_xml
-          name = "the_duplicate_job"
-          @valid_post_responses.should include(
-            @client.job.create(name, xml).to_i
-          )
-          @client.job.list(name).include?(name).should be_true
-          expect(
-            lambda { @client.job.create(name, xml) }
-          ).to raise_error(JenkinsApi::Exceptions::JobAlreadyExists)
-          @valid_post_responses.should include(
-            @client.job.delete(name).to_i
-          )
         end
       end
 
       describe "#create_freestyle" do
 
-        def test_and_validate(name, params, config_line = nil)
-          @valid_post_responses.should include(
-            @client.job.create_freestyle(params).to_i
-          )
+        def test_and_validate(name, params)
+          @client.job.create_freestyle(params).to_i.should == 200
           @client.job.list(name).include?(name).should be_true
-          # Test for the existense of the given line in the config.xml of the
-          # job created
-          unless config_line.nil?
-            config = @client.job.get_config(name)
-            config.should =~ /#{config_line}/
-          end
-          @valid_post_responses.should include(
-            @client.job.delete(name).to_i
-          )
+          @client.job.delete(name).to_i.should == 302
           @client.job.list(name).include?(name).should be_false
         end
 
-        it "Should create a freestyle job with just name" do
+        it "Should be able to create a simple freestyle job" do
           name = "test_job_name_using_params"
           params = {
             :name => name
           }
           test_and_validate(name, params)
         end
-        it "Should create a freestyle job with shell command" do
+        it "Should be able to create a freestyle job with shell command" do
           name = "test_job_using_params_shell"
           params = {
             :name => name,
             :shell_command => "echo this is a free style project"
           }
-          test_and_validate(
-            name,
-            params,
-            "<command>echo this is a free style project</command>"
-          )
+          test_and_validate(name, params)
         end
-        it "Should create a freestyle job with Git SCM provider" do
+        it "Should accept Git SCM provider" do
           name = "test_job_with_git_scm"
           params = {
             :name => name,
@@ -121,13 +91,9 @@ describe JenkinsApi::Client::Job do
             :scm_url => "git://github.com./arangamani/jenkins_api_client.git",
             :scm_branch => "master"
           }
-          test_and_validate(
-            name,
-            params,
-            "<url>git://github.com./arangamani/jenkins_api_client.git</url>"
-          )
+          test_and_validate(name, params)
         end
-        it "Should create a freestyle job with SVN SCM provider" do
+        it "Should accept subversion SCM provider" do
           name = "test_job_with_subversion_scm"
           params = {
             :name => name,
@@ -135,13 +101,9 @@ describe JenkinsApi::Client::Job do
             :scm_url => "http://svn.freebsd.org/base/",
             :scm_branch => "master"
           }
-          test_and_validate(
-            name,
-            params,
-            "<remote>http://svn.freebsd.org/base/</remote>"
-          )
+          test_and_validate(name, params)
         end
-        it "Should create a freestyle job with CVS SCM provider with branch" do
+        it "Should accept CVS SCM provider with branch" do
           name = "test_job_with_cvs_scm_branch"
           params = {
             :name => name,
@@ -150,13 +112,9 @@ describe JenkinsApi::Client::Job do
             :scm_module => "src",
             :scm_branch => "MAIN"
           }
-          test_and_validate(
-            name,
-            params,
-            "<cvsroot>http://cvs.NetBSD.org</cvsroot>"
-          )
+          test_and_validate(name, params)
         end
-        it "Should create a freestyle job with CVS SCM provider with tag" do
+        it "Should accept CVS SCM provider with tag" do
           name = "test_job_with_cvs_scm_tag"
           params = {
             :name => name,
@@ -165,13 +123,9 @@ describe JenkinsApi::Client::Job do
             :scm_module => "src",
             :scm_tag => "MAIN"
           }
-          test_and_validate(
-            name,
-            params,
-            "<cvsroot>http://cvs.NetBSD.org</cvsroot>"
-          )
+          test_and_validate(name, params)
         end
-        it "Should raise an error if unsupported SCM is specified" do
+        it "Should fail if unsupported SCM is specified" do
           name = "test_job_unsupported_scm"
           params = {
             :name => name,
@@ -183,7 +137,7 @@ describe JenkinsApi::Client::Job do
             lambda{ @client.job.create_freestyle(params) }
           ).to raise_error
         end
-        it "Should create a freestyle job with restricted_node option" do
+        it "Should accept restricted_node option" do
           name = "test_job_restricted_node"
           params = {
             :name => name,
@@ -191,8 +145,7 @@ describe JenkinsApi::Client::Job do
           }
           test_and_validate(name, params)
         end
-        it "Should create a freestyle job with" +
-          " block_build_when_downstream_building option" do
+        it "Should accept block_build_when_downstream_building option" do
           name = "test_job_block_build_when_downstream_building"
           params = {
             :name => name,
@@ -200,8 +153,7 @@ describe JenkinsApi::Client::Job do
           }
           test_and_validate(name, params)
         end
-        it "Should create a freestyle job with" +
-          " block_build_when_upstream_building option" do
+        it "Should accept block_build_when_upstream_building option" do
           name = "test_job_block_build_when_upstream_building"
           params = {
             :name => name,
@@ -209,7 +161,7 @@ describe JenkinsApi::Client::Job do
           }
           test_and_validate(name, params)
         end
-        it "Should create a freestyle job with concurrent_build option" do
+        it "Should accept concurrent_build option" do
           name = "test_job_concurrent_build"
           params = {
             :name => name,
@@ -217,7 +169,7 @@ describe JenkinsApi::Client::Job do
           }
           test_and_validate(name, params)
         end
-        it "Should create a freestyle job with timer option" do
+        it "Should accept the timer option" do
           name = "test_job_using_timer"
           params = {
             :name => name,
@@ -225,7 +177,7 @@ describe JenkinsApi::Client::Job do
           }
           test_and_validate(name, params)
         end
-        it "Should create a freestyle job with child projects option" do
+        it "Should accept child projects option" do
           name = "test_job_child_projects"
           params = {
             :name => name,
@@ -234,7 +186,7 @@ describe JenkinsApi::Client::Job do
           }
           test_and_validate(name, params)
         end
-        it "Should create a freestyle job with notification_email option" do
+        it "Should accept notification_email option" do
           name = "test_job_notification_email"
           params = {
             :name => name,
@@ -242,8 +194,7 @@ describe JenkinsApi::Client::Job do
           }
           test_and_validate(name, params)
         end
-        it "Should create a freestyle job with notification for" +
-          " individual skype targets" do
+        it "Should accept notification for individual skype targets" do
           name = "test_job_with_individual_skype_targets"
           params = {
             :name => name,
@@ -251,8 +202,7 @@ describe JenkinsApi::Client::Job do
           }
           test_and_validate(name, params)
         end
-        it "Should create a freestyle job with notification for" +
-          " group skype targets" do
+        it "Should accept notification for group skype targets" do
           name = "test_job_with_group_skype_targets"
           params = {
             :name => name,
@@ -260,8 +210,7 @@ describe JenkinsApi::Client::Job do
           }
           test_and_validate(name, params)
         end
-        it "Should create a freestyle job with complex skype" +
-          " configuration" do
+        it "Should accept complex skype configuration" do
           name = "test_job_with_complex_skype_configuration"
           params = {
             :name => name,
@@ -276,83 +225,31 @@ describe JenkinsApi::Client::Job do
           }
           test_and_validate(name, params)
         end
-        it "Should raise an error if the input parameters is not a Hash" do
-          expect(
-            lambda {
-              @client.job.create_freestyle("a_string")
-            }
-          ).to raise_error(ArgumentError)
-        end
-        it "Should raise an error if the required name paremeter is missing" do
-          expect(
-            lambda {
-              @client.job.create_freestyle(:shell_command => "sleep 60")
-            }
-          ).to raise_error(ArgumentError)
-        end
-      end
-
-      describe "#copy" do
-        it "accepts the from and to job name and copies the job" do
-          xml = @helper.create_job_xml
-          @client.job.create("from_job_copy_test", xml)
-          @client.job.copy("from_job_copy_test", "to_job_copy_test")
-          @client.job.list(".*_job_copy_test").should == [
-            "from_job_copy_test", "to_job_copy_test"
-          ]
-          @client.job.delete("from_job_copy_test")
-          @client.job.delete("to_job_copy_test")
-        end
-        it "accepts the from job name and copies the from job to the" +
-          " copy_of_from job" do
-          xml = @helper.create_job_xml
-          @client.job.create("from_job_copy_test", xml)
-          @client.job.copy("from_job_copy_test")
-          @client.job.list(".*_job_copy_test").should == [
-            "copy_of_from_job_copy_test", "from_job_copy_test"
-          ]
-          @client.job.delete("from_job_copy_test")
-          @client.job.delete("copy_of_from_job_copy_test")
-        end
       end
 
       describe "#add_email_notification" do
         it "Should accept email address and add to existing job" do
           name = "email_notification_test_job"
           params = {:name => name}
-          @valid_post_responses.should include(
-            @client.job.create_freestyle(params).to_i
-          )
-          @valid_post_responses.should include(
-            @client.job.add_email_notification(
-              :name => name,
-              :notification_email => "testuser@testdomain.com"
-            ).to_i
-          )
-          @valid_post_responses.should include(
-            @client.job.delete(name).to_i
-          )
+          @client.job.create_freestyle(params).to_i.should == 200
+          @client.job.add_email_notification(
+            :name => name,
+            :notification_email => "testuser@testdomain.com"
+          ).to_i.should == 200
+          @client.job.delete(name).to_i.should == 302
         end
       end
 
       describe "#add_skype_notification" do
         it "Should accept skype configuration and add to existing job" do
           name = "skype_notification_test_job"
-          params = {
-            :name => name
-          }
-          @valid_post_responses.should include(
-            @client.job.create_freestyle(params).to_i
-          )
-          @valid_post_responses.should include(
-            @client.job.add_skype_notification(
-              :name => name,
-              :skype_targets => "testuser"
-            ).to_i
-          )
-          @valid_post_responses.should include(
-            @client.job.delete(name).to_i
-          )
+          params = {:name => name}
+          @client.job.create_freestyle(params).to_i.should == 200
+          @client.job.add_skype_notification(
+            :name => name,
+            :skype_targets => "testuser"
+          ).to_i.should == 200
+          @client.job.delete(name).to_i.should == 302
         end
       end
 
@@ -371,37 +268,21 @@ describe JenkinsApi::Client::Job do
 
       describe "#recreate" do
         it "Should be able to re-create a job" do
-          @valid_post_responses.should include(
-            @client.job.recreate("qwerty_nonexistent_job").to_i
-          )
+          @client.job.recreate("qwerty_nonexistent_job").to_i.should == 200
         end
       end
 
       describe "#change_description" do
         it "Should be able to change the description of a job" do
-          @valid_post_responses.should include(
-            @client.job.change_description("qwerty_nonexistent_job",
-            "The description has been changed by the spec test").to_i
-          )
+          @client.job.change_description("qwerty_nonexistent_job",
+            "The description has been changed by the spec test"
+          ).to_i.should == 200
         end
       end
 
       describe "#delete" do
         it "Should be able to delete a job" do
-          @valid_post_responses.should include(
-            @client.job.delete("qwerty_nonexistent_job").to_i
-          )
-        end
-      end
-
-      describe "#wipe_out_workspace" do
-        it "Should be able to wipe out the workspace of a job" do
-          xml = @helper.create_job_xml
-          @client.job.create("wipeout_job_test", xml)
-          @valid_post_responses.should include(
-            @client.job.wipe_out_workspace("wipeout_job_test").to_i
-          )
-          @client.job.delete("wipeout_job_test")
+          @client.job.delete("qwerty_nonexistent_job").to_i.should == 302
         end
       end
 
@@ -488,7 +369,7 @@ describe JenkinsApi::Client::Job do
           response = @client.job.build(@job_name)
           # As of Jenkins version 1.519 the job build responds with a 201
           # status code.
-          @valid_post_responses.should include(response.to_i)
+          [201, 302].should include(response.to_i)
           # Sleep for 6 seconds so we don't hit the Jenkins quiet period (5
           # seconds)
           sleep 6
@@ -497,20 +378,6 @@ describe JenkinsApi::Client::Job do
             # Waiting for this job to finish so it doesn't affect other tests
             sleep 10
           end
-        end
-      end
-
-      describe "#disable" do
-        it "Should disable the specified job and then enable it again" do
-          @client.job.list_details(@job_name)['buildable'].should == true
-          response = @client.job.disable(@job_name)
-          response.to_i.should == 302
-          sleep 3
-          @client.job.list_details(@job_name)['buildable'].should == false
-          response = @client.job.enable(@job_name)
-          response.to_i.should == 302
-          sleep 3
-          @client.job.list_details(@job_name)['buildable'].should == true
         end
       end
 
@@ -523,9 +390,7 @@ describe JenkinsApi::Client::Job do
           sleep 6
           @client.job.get_current_build_status(@job_name).should == "running"
           sleep 5
-          @valid_post_responses.should include(
-            @client.job.stop_build(@job_name).to_i
-          )
+          @client.job.stop_build(@job_name).to_i.should == 302
           sleep 5
           @client.job.get_current_build_status(@job_name).should == "aborted"
         end
@@ -533,13 +398,9 @@ describe JenkinsApi::Client::Job do
 
       describe "#restrict_to_node" do
         it "Should be able to restrict a job to a node" do
-          @valid_post_responses.should include(
-            @client.job.restrict_to_node(@job_name, 'master').to_i
-          )
+          @client.job.restrict_to_node(@job_name, 'master').to_i.should == 200
           # Run it again to make sure that the replace existing node works
-          @valid_post_responses.should include(
-            @client.job.restrict_to_node(@job_name, 'master').to_i
-          )
+          @client.job.restrict_to_node(@job_name, 'master').to_i.should == 200
         end
       end
 

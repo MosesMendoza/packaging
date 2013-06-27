@@ -10,7 +10,6 @@ describe JenkinsApi::Client::Node do
   context "With properly initialized client" do
     before(:all) do
       @creds_file = '~/.jenkins_api_client/spec.yml'
-      @valid_post_responses = [200, 201, 302]
       @node_name = 'master'
       begin
         @client = JenkinsApi::Client.new(
@@ -47,13 +46,9 @@ describe JenkinsApi::Client::Node do
 
         def test_and_validate(params)
           name = params[:name]
-          @valid_post_responses.should include(
-            @client.node.create_dump_slave(params).to_i
-          )
+          @client.node.create_dump_slave(params).to_i.should == 302
           @client.node.list(name).include?(name).should be_true
-          @valid_post_responses.should include(
-            @client.node.delete(params[:name]).to_i
-          )
+          @client.node.delete(params[:name]).to_i.should == 302
           @client.node.list(name).include?(name).should be_false
         end
 
@@ -80,7 +75,7 @@ describe JenkinsApi::Client::Node do
           }
           expect(
             lambda{ @client.node.create_dump_slave(params) }
-          ).to raise_error(ArgumentError)
+          ).to raise_error
         end
         it "fails if slave_host is missing" do
           params = {
@@ -89,7 +84,7 @@ describe JenkinsApi::Client::Node do
           }
           expect(
             lambda{ @client.node.create_dump_slave(params) }
-          ).to raise_error(ArgumentError)
+          ).to raise_error
         end
         it "fails if private_key_file is missing" do
           params = {
@@ -98,7 +93,7 @@ describe JenkinsApi::Client::Node do
           }
           expect(
             lambda{ @client.node.create_dump_slave(params) }
-          ).to raise_error(ArgumentError)
+          ).to raise_error
         end
         it "fails if the slave already exists in Jenkins" do
           params = {
@@ -106,15 +101,11 @@ describe JenkinsApi::Client::Node do
             :slave_host => "10.10.10.10",
             :private_key_file => "/root/.ssh/id_rsa"
           }
-          @valid_post_responses.should include(
-            @client.node.create_dump_slave(params).to_i
-          )
+          @client.node.create_dump_slave(params).to_i.should == 302
           expect(
             lambda{ @client.node.create_dump_slave(params) }
-          ).to raise_error(JenkinsApi::Exceptions::NodeAlreadyExists)
-          @valid_post_responses.should include(
-            @client.node.delete(params[:name]).to_i
-          )
+          ).to raise_error
+          @client.node.delete(params[:name]).to_i.should == 302
         end
       end
 
@@ -125,12 +116,8 @@ describe JenkinsApi::Client::Node do
             :slave_host => "10.10.10.10",
             :private_key_file => "/root/.ssh/id_rsa"
           }
-          @valid_post_responses.should include(
-            @client.node.create_dump_slave(params).to_i
-          )
-          @valid_post_responses.should include(
-            @client.node.delete(params[:name]).to_i
-          )
+          @client.node.create_dump_slave(params).to_i.should == 302
+          @client.node.delete(params[:name]).to_i.should == 302
         end
         it "raises an error if the slave doesn't exist in Jenkins" do
           expect(
@@ -180,12 +167,8 @@ describe JenkinsApi::Client::Node do
 
       describe "#change_mode" do
         it "changes the mode of the given slave to the given mode" do
-          @valid_post_responses.should include(
-            @client.node.change_mode("slave", "exclusive").to_i
-          )
-          @valid_post_responses.should include(
-            @client.node.change_mode("slave", "normal").to_i
-          )
+          @client.node.change_mode("slave", "exclusive").to_i.should == 200
+          @client.node.change_mode("slave", "normal").to_i.should == 200
         end
       end
 

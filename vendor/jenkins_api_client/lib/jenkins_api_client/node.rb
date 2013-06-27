@@ -90,7 +90,6 @@ module JenkinsApi
       #
       def initialize(client)
         @client = client
-        @logger = @client.logger
       end
 
       # Gives the string representation of the Object
@@ -122,13 +121,16 @@ module JenkinsApi
       #   )
       #
       def create_dump_slave(params)
-        unless params[:name] && params[:slave_host] && params[:private_key_file]
-          raise ArgumentError, "Name, slave host, and private key file are" +
-            " required for creating a slave."
+
+        if list.include?(params[:name])
+          raise "The specified slave '#{params[:name]}' already exists."
         end
 
-        @logger.info "Creating a dump slave '#{params[:name]}'"
-        @logger.debug "Creating a dump slave with params: #{params.inspect}"
+        unless params[:name] && params[:slave_host] && params[:private_key_file]
+          raise "Name, slave host, and private key file are required for" +
+            " creating a slave."
+        end
+
         default_params = {
           :description => "Automatically created through jenkins_api_client",
           :executors => 2,
@@ -168,8 +170,7 @@ module JenkinsApi
             }
           }.to_json
         }
-        @logger.debug "Modified params posted to create slave:" +
-          " #{post_params.inspect}"
+
         @client.api_post_request("/computer/doCreateItem", post_params)
       end
 
@@ -178,7 +179,6 @@ module JenkinsApi
       # @param [String] node_name Name of the node to delete
       #
       def delete(node_name)
-        @logger.info "Deleting node '#{node_name}'"
         if list.include?(node_name)
           @client.api_post_request("/computer/#{node_name}/doDelete")
         else
@@ -193,7 +193,6 @@ module JenkinsApi
       #       caution.
       #
       def delete_all!
-        @logger.info "Deleting all nodes (except master) from jenkins"
         list.each { |node| delete(node) unless node == "master" }
       end
 
@@ -203,7 +202,6 @@ module JenkinsApi
       # @param [Bool] ignorecase whether to be case sensitive or not
       #
       def list(filter = nil, ignorecase = true)
-        @logger.info "Obtaining nodes from jenkins matching filter '#{filter}'"
         node_names = []
         response_json = @client.api_get_request("/computer")
         response_json["computer"].each do |computer|
@@ -229,7 +227,6 @@ module JenkinsApi
       #
       GENERAL_ATTRIBUTES.each do |meth_suffix|
         define_method("get_#{meth_suffix}") do
-          @logger.info "Obtaining '#{meth_suffix}' attribute from jenkins"
           response_json = @client.api_get_request("/computer")
           response_json["#{meth_suffix}"]
         end
@@ -239,7 +236,6 @@ module JenkinsApi
       #
       NODE_PROPERTIES.each do |meth_suffix|
         define_method("is_#{meth_suffix}?") do |node_name|
-          @logger.info "Obtaining '#{meth_suffix}' property of '#{node_name}'"
           response_json = @client.api_get_request("/computer")
           resp = response_json["computer"][index(node_name)]["#{meth_suffix}"]
           resp =~ /False/i ? false : true
@@ -249,7 +245,6 @@ module JenkinsApi
       # Defines methods for node specific attributes.
       NODE_ATTRIBUTES.each do |meth_suffix|
         define_method("get_node_#{meth_suffix}") do |node_name|
-          @logger.info "Obtaining '#{meth_suffix}' attribute of '#{node_name}'"
           response_json = @client.api_get_request("/computer")
           response_json["computer"][index(node_name)]["#{meth_suffix}"]
         end
@@ -261,7 +256,6 @@ module JenkinsApi
       # @param [String] mode mode to change to
       #
       def change_mode(node_name, mode)
-        @logger.info "Changing the mode of '#{node_name}' to '#{mode}'"
         mode = mode.upcase
         xml = get_config(node_name)
         n_xml = Nokogiri::XML(xml)
@@ -276,7 +270,6 @@ module JenkinsApi
       # @param [String] node_name name of the node
       #
       def get_config(node_name)
-        @logger.info "Obtaining the config.xml of node '#{node_name}'"
         node_name = "(master)" if node_name == "master"
         @client.get_config("/computer/#{node_name}")
       end
@@ -287,7 +280,6 @@ module JenkinsApi
       # @param [String] xml Config.xml of the node
       #
       def post_config(node_name, xml)
-        @logger.info "Posting the config.xml of node '#{node_name}'"
         node_name = "(master)" if node_name == "master"
         @client.post_config("/computer/#{node_name}/config.xml", xml)
       end

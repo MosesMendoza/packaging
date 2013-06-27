@@ -26,9 +26,7 @@ require 'net/http'
 require 'net/https'
 require 'nokogiri'
 require 'base64'
-require 'mixlib/shellout'
-require 'uri'
-require 'logger'
+require "mixlib/shellout"
 
 # The main module that contains the Client class and all subclasses that
 # communicate with the Jenkins's Remote Access API.
@@ -39,7 +37,7 @@ module JenkinsApi
   # for various operations.
   #
   class Client
-    attr_accessor :timeout, :logger
+    attr_accessor :debug, :timeout
     # Default port to be used to connect to Jenkins
     DEFAULT_SERVER_PORT = 8080
     # Default timeout in seconds to be used while performing operations
@@ -55,8 +53,7 @@ module JenkinsApi
       "username",
       "password",
       "password_base64",
-      "log_location",
-      "log_level",
+      "debug",
       "timeout",
       "ssl",
       "follow_redirects"
@@ -64,40 +61,19 @@ module JenkinsApi
 
     # Initialize a Client object with Jenkins CI server credentials
     #
-    # @param args [Hash] Arguments to connect to Jenkins server
-    #
-    # @option args [String] :server_ip
-    #   the IP address of the Jenkins CI server
-    # @option args [String] :server_port
-    #   the port on which the Jenkins listens
-    # @option args [String] :server_url
-    #   the full URL address of the Jenkins CI server (http/https)
-    # @option args [String] :username
-    #   the username used for connecting to the server (optional)
-    # @option args [String] :password
-    #   the password for connecting to the CI server (optional)
-    # @option args [String] :password_base64
-    #   the password with base64 encoded format for connecting to the CI
-    #   server (optional)
-    # @option args [String] :proxy_ip
-    #   the proxy IP address
-    # @option args [String] :proxy_port
-    #   the proxy port
-    # @option args [String] :jenkins_path
-    #   the optional context path for Jenkins
-    # @option args [Boolean] :ssl
-    #   indicates if Jenkins is accessible over HTTPS (defaults to false)
-    # @option args [Boolean] :follow_redirects
-    #   This argument causes the client to follow a redirect (jenkins can
-    #   return a 30x when starting a build)
-    # @option args [Fixnum] :timeout
-    #   This argument sets the timeout for the jenkins system to become ready
-    # @option args [String] :log_location
-    #   The location for the log file (Defaults to STDOUT)
-    # @option args [Fixnum] :log_level
-    #   The level for messages to be logged. Should be one of:
-    #   Logger::DEBUG (0), Logger::INFO (1), Logger::WARN (2), Logger::ERROR
-    #   (2), Logger::FATAL (3) (Defaults to Logger::INFO)
+    # @param [Hash] args
+    #  * the +:server_ip+ param is the IP address of the Jenkins CI server
+    #  * the +:server_port+ param is the port on which the Jenkins listens
+    #  * the +:server_url+ param is the full URL address of the Jenkins CI server (http/https)
+    #  * the +:username+ param is the username used for connecting to the server (optional)
+    #  * the +:password+ param is the password for connecting to the CI server (optional)
+    #  * the +:proxy_ip+ param is the proxy IP address
+    #  * the +:proxy_port+ param is the proxy port
+    #  * the +:jenkins_path+ param is the optional context path for Jenkins
+    #  * the +:ssl+ param indicates if Jenkins is accessible over HTTPS
+    #    (defaults to false)
+    #  * the +:follow_redirects+ param will cause the client to follow a redirect
+    #    (jenkins can return a 30x when starting a build)
     #
     # @return [JenkinsApi::Client] a client object to Jenkins API
     #
@@ -109,15 +85,10 @@ module JenkinsApi
           instance_variable_set("@#{key}", value)
         end
       end if args.is_a? Hash
-
-      # Server IP or Server URL must be specifiec
       unless @server_ip || @server_url
-        raise ArgumentError, "Server IP or Server URL is required to connect" +
-          " to Jenkins"
+        raise ArgumentError, "Server IP or Server URL is required to connect to Jenkins"
       end
-
-      # Username/password are optional as some jenkins servers do not require
-      # authentication
+      # Username/password are optional as some jenkins servers do not require auth
       if @username && !(@password || @password_base64)
         raise ArgumentError, "If username is provided, password is required"
       end
@@ -125,35 +96,23 @@ module JenkinsApi
         raise ArgumentError, "Proxy IP and port must both be specified or" +
           " both left nil"
       end
-
       @server_uri = URI.parse(@server_url) if @server_url
       @server_port = DEFAULT_SERVER_PORT unless @server_port
       @timeout = DEFAULT_TIMEOUT unless @timeout
       @ssl ||= false
       @ssl = @server_uri.scheme == "https" if @server_uri
-
-      # Setting log options
-      @log_location = STDOUT unless @log_location
-      @log_level = Logger::INFO unless @log_level
-      @logger = Logger.new(@log_location)
-      @logger.level = @log_level
-
+      @debug = false unless @debug
 
       # Base64 decode inserts a newline character at the end. As a workaround
       # added chomp to remove newline characters. I hope nobody uses newline
       # characters at the end of their passwords :)
       @password = Base64.decode64(@password_base64).chomp if @password_base64
+    end
 
-      # No connections are made to the Jenkins server during initialize to
-      # allow the unit tests to behave normally as mocking is simpler this way.
-      # If this variable is nil, the first POST request will query the API and
-      # populate this variable.
-      @crumbs_enabled = nil
-      # The crumbs hash. Store it so that we don't have to obtain the crumb for
-      # every POST request. It appears that the crumb doesn't change often.
-      @crumb = {}
-      # This is the number of times to refetch the crumb if it ever expires.
-      @crumb_max_retries = 3
+    # This method toggles the debug parameter in run time
+    #
+    def toggle_debug
+      @debug = @debug == false ? true : false
     end
 
     # Creates an instance to the Job class by passing a reference to self
@@ -202,21 +161,6 @@ module JenkinsApi
     #
     def to_s
       "#<JenkinsApi::Client>"
-    end
-
-    # Overrides the inspect method to get rid of the credentials being shown in
-    # the in interactive IRB sessions and also when the `inspect` method is
-    # called. Just print the important variables.
-    #
-    def inspect
-      "#<JenkinsApi::Client:0x#{(self.__id__ * 2).to_s(16)}" +
-        " @ssl=#{@ssl.inspect}," +
-        " @log_location=#{@log_location.inspect}," +
-        " @log_level=#{@log_level.inspect}," +
-        " @crumbs_enabled=#{@crumbs_enabled.inspect}," +
-        " @follow_redirects=#{@follow_redirects.inspect}," +
-        " @jenkins_path=#{@jenkins_path.inspect}," +
-        " @timeout=#{@timeout.inspect}>"
     end
 
     # Connects to the Jenkins server, sends the specified request and returns
@@ -297,7 +241,7 @@ module JenkinsApi
       end
       to_get = URI.escape(to_get)
       request = Net::HTTP::Get.new(to_get)
-      @logger.info "GET #{to_get}"
+      puts "[INFO] GET #{to_get}" if @debug
       response = make_http_request(request)
       if raw_response
         response
@@ -314,32 +258,15 @@ module JenkinsApi
     # @return [String] Response code form Jenkins Response
     #
     def api_post_request(url_prefix, form_data = {})
-      retries = @crumb_max_retries
-      begin
-        # Identify whether to use crumbs if this is the first POST request.
-        @crumbs_enabled = use_crumbs? if @crumbs_enabled.nil?
-        @crumb = get_crumb if @crumbs_enabled && @crumb.empty?
-
-        # Added form_data default {} instead of nil to help with proxies
-        # that barf with empty post
-        url_prefix = URI.escape("#{@jenkins_path}#{url_prefix}")
-        request = Net::HTTP::Post.new("#{url_prefix}")
-        @logger.info "POST #{url_prefix}"
-        request.content_type = 'application/json'
-        if @crumbs_enabled
-          request[@crumb["crumbRequestField"]] = @crumb["crumb"]
-        end
-        request.set_form_data(form_data)
-        response = make_http_request(request)
-        handle_exception(response)
-      rescue Exceptions::ForbiddenException
-        @logger.info "Crumb expired. Refetching from the server. Trying" +
-          " #{@crumb_max_retries - retries + 1} out of #{@crumb_max_retries}" +
-          " times..."
-        @crumb = get_crumb
-        retries -= 1
-        retries > 0 ? retry : raise
-      end
+      # Added form_data default {} instead of nil to help with proxies
+      # that barf with empty post
+      url_prefix = URI.escape("#{@jenkins_path}#{url_prefix}")
+      request = Net::HTTP::Post.new("#{url_prefix}")
+      puts "[INFO] POST #{url_prefix}" if @debug
+      request.content_type = 'application/json'
+      request.set_form_data(form_data)
+      response = make_http_request(request)
+      handle_exception(response)
     end
 
     # Obtains the configuration of a component from the Jenkins CI server
@@ -351,7 +278,7 @@ module JenkinsApi
     def get_config(url_prefix)
       url_prefix = URI.escape("#{@jenkins_path}#{url_prefix}")
       request = Net::HTTP::Get.new("#{url_prefix}/config.xml")
-      @logger.info "GET #{url_prefix}/config.xml"
+      puts "[INFO] GET #{url_prefix}/config.xml" if @debug
       response = make_http_request(request)
       handle_exception(response, "body")
     end
@@ -364,45 +291,18 @@ module JenkinsApi
     # @return [String] Response code returned from Jenkins
     #
     def post_config(url_prefix, xml)
-      retries = @crumb_max_retries
-      begin
-        # Identify whether to use crumbs if this is the first POST request.
-        @crumbs_enabled = use_crumbs? if @crumbs_enabled.nil?
-        @crumb = get_crumb if @crumbs_enabled && @crumb.empty?
-
-        url_prefix = URI.escape("#{@jenkins_path}#{url_prefix}")
-        request = Net::HTTP::Post.new("#{url_prefix}")
-        @logger.info "POST #{url_prefix}"
-        request.body = xml
-        request.content_type = 'application/xml'
-        if @crumbs_enabled
-          request[@crumb["crumbRequestField"]] = @crumb["crumb"]
-        end
-        response = make_http_request(request)
-        handle_exception(response)
-      rescue Exceptions::ForbiddenException
-        @logger.info "Crumb expired. Refetching from the server. Trying" +
-          " #{@crumb_max_retries - retries + 1} out of #{@crumb_max_retries}" +
-          " times..."
-        @crumb = get_crumb
-        retries -= 1
-        retries > 0 ? retry : raise
-      end
+      url_prefix = URI.escape("#{@jenkins_path}#{url_prefix}")
+      request = Net::HTTP::Post.new("#{url_prefix}")
+      puts "[INFO] POST #{url_prefix}" if @debug
+      request.body = xml
+      request.content_type = 'application/xml'
+      response = make_http_request(request)
+      handle_exception(response)
     end
 
-    def use_crumbs?
-      response = api_get_request("")
-      response["useCrumbs"]
-    end
-
-    def use_security?
-      response = api_get_request("")
-      response["useSecurity"]
-    end
-
-    # Obtains the jenkins version from the API
+    # Obtain the version of Jenkins CI server
     #
-    # @return Jenkins version
+    # @return [String] Version of Jenkins
     #
     def get_jenkins_version
       response = get_root
@@ -454,28 +354,11 @@ module JenkinsApi
         # The stderr has a stack trace of the Java program. We'll already have
         # a stack trace for Ruby. So just display a descriptive message for the
         # error thrown by the CLI.
-        raise Exceptions::CLIException.new(
-          @logger,
-          java_cmd.stderr.split("\n").first
-        )
+        raise Exceptions::CLIException.new(java_cmd.stderr.split("\n").first)
       end
     end
 
     private
-
-    def get_crumb
-      begin
-        @logger.debug "Obtaining crumb from the jenkins server"
-        api_get_request("/crumbIssuer")
-      rescue Exceptions::NotFoundException
-        raise Exceptions::CrumbNotFoundException.new(
-          @logger,
-          "CSRF protection is not enabled on the server at the moment." +
-          " Perhaps the client was initialized when the CSRF setting was" +
-          " enabled. Please re-initialize the client."
-        )
-      end
-    end
 
     # Private method that handles the exception and raises with proper error
     # message with the type of exception and returns the required values if no
@@ -490,18 +373,18 @@ module JenkinsApi
     # @return [String, JSON] Response returned whether loaded JSON or raw
     #   string
     #
-    # @raise [Exceptions::Unauthorized] When invalid credentials are
+    # @raise [Exceptions::UnauthorizedException] When invalid credentials are
     #   provided to connect to Jenkins
-    # @raise [Exceptions::NotFound] When the requested page on Jenkins is not
-    #   found
-    # @raise [Exceptions::InternalServerError] When Jenkins returns a 500
-    #   Internal Server Error
+    # @raise [Exceptions::NotFoundException] When the requested page on Jenkins
+    #   is found
+    # @raise [Exceptions::InternelServerErrorException] When Jenkins returns a
+    #   500 Internel Server Error
     # @raise [Exceptions::ApiException] Any other exception returned from
     #   Jenkins that are not categorized in the API Client.
     #
     def handle_exception(response, to_send = "code", send_json = false)
       msg = "HTTP Code: #{response.code}, Response Body: #{response.body}"
-      @logger.debug msg
+      puts msg if @debug
       case response.code.to_i
       # As of Jenkins version 1.519, the job builds return a 201 status code
       # with a Location HTTP header with the pointing the URL of the item in
@@ -516,44 +399,21 @@ module JenkinsApi
         end
       when 400
         case response.body
-        when /A job already exists with the name ['"](.*)['"]</
-          raise Exceptions::JobAlreadyExists.new(
-            @logger,
-            "Job with name '#{$1}' already exists"
-        )
-        when /A view already exists with the name ['"](.*)['"]</
-          raise Exceptions::ViewAlreadyExists.new(
-            @logger,
-            "View with name '#{$1}' already exists"
-        )
-        when /Slave called ['"](.*)['"] already exists</
-          raise Exceptions::NodeAlreadyExists.new(
-            @logger,
-            "Slave with name '#{$1}' already exists"
-        )
+        when /A job already exists with the name/
+          raise Exceptions::JobAlreadyExistsWithName.new
         when /Nothing is submitted/
-          raise Exceptions::NothingSubmitted.new @logger
+          raise Exceptions::NothingSubmitted.new
         else
-          raise Exceptions::ApiException.new(
-            @logger,
-            "Unknown API Exception with Error code 400"
-          )
+          raise Exceptions::ApiException.new("Error code 400")
         end
       when 401
-        raise Exceptions::Unauthorized.new @logger
-      when 403
-        raise Exceptions::Forbidden.new @logger
+        raise Exceptions::UnautherizedException.new
       when 404
-        raise Exceptions::NotFound.new @logger
+        raise Exceptions::NotFoundException.new
       when 500
-        raise Exceptions::InternelServerError.new @logger
-      when 503
-        raise Exceptions::ServiceUnavailable.new @logger
+        raise Exceptions::InternelServerErrorException.new
       else
-        raise Exceptions::ApiException.new(
-          @logger,
-          "Error code #{response.code}"
-        )
+        raise Exceptions::ApiException.new("Error code #{response.code}")
       end
     end
 

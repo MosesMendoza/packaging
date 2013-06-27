@@ -5,9 +5,7 @@ describe JenkinsApi::Client::Job do
   context "With properly initialized Client and all methods defined" do
 
     before do
-      mock_logger = Logger.new "/dev/null"
       @client = mock
-      @client.should_receive(:logger).and_return(mock_logger)
       @job = JenkinsApi::Client::Job.new(@client)
       @sample_json_response = {
         "jobs" => [
@@ -136,21 +134,6 @@ describe JenkinsApi::Client::Job do
         end
       end
 
-      describe "#copy" do
-        it "accepts the from and to job names and copies the from job to the to job" do
-          @client.should_receive(:api_post_request).with(
-            "/createItem?name=new_job&mode=copy&from=old_job"
-          )
-          @job.copy("old_job", "new_job")
-        end
-        it "accepts the from job name and copies the from job to the copy_of_from job" do
-          @client.should_receive(:api_post_request).with(
-            "/createItem?name=copy_of_old_job&mode=copy&from=old_job"
-          )
-          @job.copy("old_job")
-        end
-      end
-
       describe "#add_email_notification" do
         it "accepts email address and adds to existing job" do
           params = {
@@ -196,15 +179,6 @@ describe JenkinsApi::Client::Job do
         it "accepts the job name and deletes the job" do
           @client.should_receive(:api_post_request)
           @job.delete('test_job')
-        end
-      end
-
-      describe "#wipe_out_workspace" do
-        it "accepts the job name and wipes out the workspace of the job" do
-          @client.should_receive(:api_post_request).with(
-            "/job/test_job/doWipeOutWorkspace"
-          )
-          @job.wipe_out_workspace('test_job')
         end
       end
 
@@ -366,22 +340,6 @@ describe JenkinsApi::Client::Job do
         end
       end
 
-      describe "#enable" do
-        it "accepts the job name and enables the job" do
-          @client.should_receive(:api_post_request).with(
-            "/job/test_job/enable").and_return(302)
-          @job.enable("test_job").should == 302
-        end
-      end
-
-      describe "#disable" do
-        it "accepts the job name and disables the job" do
-          @client.should_receive(:api_post_request).with(
-            "/job/test_job/disable").and_return(302)
-          @job.disable("test_job").should == 302
-        end
-      end
-
       describe "#get_config" do
         it "accepts the job name and obtains its config.xml" do
           @client.should_receive(:get_config).with(
@@ -461,6 +419,7 @@ describe JenkinsApi::Client::Job do
 
       describe "#unchain" do
         it "accepts the job names and unchains them" do
+          @client.should_receive(:debug).and_return(false)
           @client.should_receive(:get_config).with(
             "/job/test_job").and_return(@sample_job_xml)
           @client.should_receive(:post_config)
@@ -470,6 +429,7 @@ describe JenkinsApi::Client::Job do
 
       describe "#chain" do
         it "accepts the job names and other options and chains them" do
+          @client.should_receive(:debug).and_return(false)
           @client.should_receive(:get_config).with(
             "/job/test_job").and_return(@sample_job_xml)
           @client.should_receive(:post_config)

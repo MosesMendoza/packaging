@@ -21,7 +21,6 @@ automating Job configuration programaticaly and so forth}
     ".jenkins.yml",
     ".travis.yml",
     "CHANGELOG.md",
-    "CONTRIBUTORS.md",
     "Gemfile",
     "LICENCE",
     "README.md",
@@ -61,9 +60,7 @@ automating Job configuration programaticaly and so forth}
     "spec/unit_tests/system_spec.rb",
     "spec/unit_tests/view_spec.rb",
     "travis/jenkins_config.xml",
-    "travis/jenkins_config_with_crumb.xml",
     "travis/setup.sh",
-    "travis/setup_crumb.sh",
     "travis/spec.yml",
     "travis/user_config.xml"
   ]

@@ -35,8 +35,6 @@ module JenkinsApi
       #
       def initialize(client)
         @client = client
-        @logger = @client.logger
-        @timeout = @client.timeout
       end
 
       # Returns a string representation of System class.
@@ -48,14 +46,12 @@ module JenkinsApi
       # Sends a quiet down request to the server.
       #
       def quiet_down
-        @logger.info "Performing a quiet down of jenkins..."
         @client.api_post_request("/quietDown")
       end
 
       # Cancels the quiet doen request sent to the server.
       #
       def cancel_quiet_down
-        @logger.info "Cancelling jenkins form quiet down..."
         @client.api_post_request("/cancelQuietDown")
       end
 
@@ -66,10 +62,8 @@ module JenkinsApi
       #
       def restart(force = false)
         if force
-          @logger.info "Performing a force restart of jenkins..."
           @client.api_post_request("/restart")
         else
-          @logger.info "Performing a safe restart of jenkins..."
           @client.api_post_request("/safeRestart")
         end
       end
@@ -77,30 +71,17 @@ module JenkinsApi
       # Reload the Jenkins server
       #
       def reload
-        @logger.info "Reloading jenkins..."
         @client.api_post_request("/reload")
-      end
-
-      # List all users known to Jenkins by their Full Name
-      #
-      def list_users
-        @logger.info "Obtaining the list of users from jenkins"
-        users = @client.api_get_request("/asynchPeople")
-        names = []
-        users['users'].each { |user|
-          names << user['user']['fullName']
-        } unless users.nil?
-        return names
       end
 
       # This method waits till the server becomes ready after a start
       # or restart.
       #
       def wait_for_ready
-        Timeout::timeout(@timeout) do
+        Timeout::timeout(@client.timeout) do
           while true do
             response = @client.get_root
-            @logger.info "Waiting for jenkins to restart..."
+            puts "[INFO] Waiting for jenkins to restart..." if @client.debug
             if (response.body =~ /Please wait while Jenkins is restarting/ ||
               response.body =~ /Please wait while Jenkins is getting ready to work/)
               sleep 30

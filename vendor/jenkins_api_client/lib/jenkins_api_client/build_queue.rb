@@ -34,7 +34,6 @@ module JenkinsApi
       #
       def initialize(client)
         @client = client
-        @logger = @client.logger
       end
 
       # Returns a string representation of BuildQueue class.
@@ -46,7 +45,6 @@ module JenkinsApi
       # Gives the number of jobs currently in the build queue
       #
       def size
-        @logger.info "Obtaining the number of tasks in build queue"
         response_json = @client.api_get_request("/queue")
         response_json["items"].size
       end
@@ -54,7 +52,6 @@ module JenkinsApi
       # Lists all tasks currently in the build queue
       #
       def list
-        @logger.info "Obtaining the tasks currently in the build queue"
         response_json = @client.api_get_request("/queue")
         tasks = []
         response_json["items"].each do |item|
@@ -70,8 +67,6 @@ module JenkinsApi
       # @return [Fixnum] age in seconds
       #
       def get_age(task_name)
-        @logger.info "Obtaining the age of task '#{task_name}' from the" +
-          " build queue"
         age = nil
         details = get_details(task_name)
         unless details.empty?
@@ -87,8 +82,6 @@ module JenkinsApi
       # @return [Hash] Queue details of the specified task/job
       #
       def get_details(task_name)
-        @logger.info "Obtaining the details of task '#{task_name}' from the" +
-          " build queue"
         response_json = @client.api_get_request("/queue")
         details = {}
         response_json["items"].each do |item|
@@ -104,8 +97,6 @@ module JenkinsApi
       # @return [Array] causes for the task to be in queue
       #
       def get_causes(task_name)
-        @logger.info "Obtaining the causes of task '#{task_name}' from the" +
-          " build queue"
         causes = nil
         details = get_details(task_name)
         unless details.empty?
@@ -124,8 +115,6 @@ module JenkinsApi
       # @return [String] reason for being in queue, nil if no task found
       #
       def get_reason(task_name)
-        @logger.info "Obtaining the reason of task '#{task_name}' from the" +
-          " build queue"
         reason = nil
         details = get_details(task_name)
         unless details.empty?
@@ -142,8 +131,6 @@ module JenkinsApi
       #                  tasks with no ETA info.
       #
       def get_eta(task_name)
-        @logger.info "Obtaining the ETA for the task '#{task_name}' from the" +
-          " build queue"
         eta = nil
         details = get_details(task_name)
         unless details.empty?
@@ -166,8 +153,6 @@ module JenkinsApi
       # @return [String] ID of the task, nil of no task is found
       #
       def get_id(task_name)
-        @logger.info "Obtaining the ID of task '#{task_name}' from the" +
-          " build queue"
         id = nil
         details = get_details(task_name)
         unless details.empty?
@@ -183,8 +168,6 @@ module JenkinsApi
       # @return [String] params, nil if the no task is found
       #
       def get_params(task_name)
-        @logger.info "Obtaining the build parameters of task '#{task_name}'" +
-          " from the build queue"
         params = nil
         details = get_details(task_name)
         unless details.empty?
@@ -200,8 +183,6 @@ module JenkinsApi
       # @return [TrueClass|FalseClass] buildable or not
       #
       def is_buildable?(task_name)
-        @logger.info "Checking if task '#{task_name}' from the build queue" +
-          " is buildable"
         buildable = nil
         details = get_details(task_name)
         unless details.empty?
@@ -217,8 +198,6 @@ module JenkinsApi
       # @return [TrueClass|FalseClass] blocked or not
       #
       def is_blocked?(task_name)
-        @logger.info "Checking if task '#{task_name}' from the build queue" +
-          " is blocked"
         blocked = nil
         details = get_details(task_name)
         unless details.empty?
@@ -234,8 +213,6 @@ module JenkinsApi
       # @return [TrueClass|FalseClass] stuck or not
       #
       def is_stuck?(task_name)
-        @logger.info "Checking if task '#{task_name}' from the build queue" +
-          " is stuck"
         stuck = nil
         details = get_details(task_name)
         unless details.empty?

@@ -10,7 +10,6 @@ describe JenkinsApi::Client::View do
   context "With properly initialized client" do
     before(:all) do
       @creds_file = '~/.jenkins_api_client/spec.yml'
-      @valid_post_responses = [200, 201, 302]
       @node_name = 'master'
       begin
         @client = JenkinsApi::Client.new(
@@ -22,9 +21,7 @@ describe JenkinsApi::Client::View do
       end
 
       # Create a view that can be used for tests
-      @valid_post_responses.should include(
-        @client.view.create("general_purpose_view").to_i
-      )
+      @client.view.create("general_purpose_view").to_i.should == 302
     end
 
     describe "InstanceMethods" do
@@ -38,61 +35,32 @@ describe JenkinsApi::Client::View do
       describe "#create" do
         it "accepts the name of the view and creates the view" do
           name = "test_view"
-          @valid_post_responses.should include(
-            @client.view.create(name).to_i
-          )
+          @client.view.create(name).to_i.should == 302
           @client.view.list(name).include?(name).should be_true
-          @valid_post_responses.should include(
-            @client.view.delete(name).to_i
-          )
+          @client.view.delete(name).to_i.should == 302
         end
         it "accepts spaces and other characters in the view name" do
           name = "test view with spaces and {special characters}"
-          @valid_post_responses.should include(
-            @client.view.create(name).to_i
-          )
+          @client.view.create(name).to_i.should == 302
           @client.view.list(name).include?(name).should be_true
-          @valid_post_responses.should include(
-            @client.view.delete(name).to_i
-          )
+          @client.view.delete(name).to_i.should == 302
         end
         it "accepts the name of view and creates a listview" do
           name = "test_view"
-          @valid_post_responses.should include(
-            @client.view.create(name, "listview").to_i
-          )
+          @client.view.create(name, "listview").to_i.should == 302
           @client.view.list(name).include?(name).should be_true
-          @valid_post_responses.should include(
-            @client.view.delete(name).to_i
-          )
+          @client.view.delete(name).to_i.should == 302
         end
         it "accepts the name of view and creates a myview" do
           name = "test_view"
-          @valid_post_responses.should include(
-            @client.view.create(name, "myview").to_i
-          )
+          @client.view.create(name, "myview").to_i.should == 302
           @client.view.list(name).include?(name).should be_true
-          @valid_post_responses.should include(
-            @client.view.delete(name).to_i
-          )
+          @client.view.delete(name).to_i.should == 302
         end
         it "raises an error when unsupported view type is specified" do
           expect(
             lambda { @client.view.create(name, "awesomeview") }
           ).to raise_error
-        end
-        it "raises proper error if the view already exists" do
-          name = "duplicate_view"
-          @valid_post_responses.should include(
-            @client.view.create(name, "listview").to_i
-          )
-          @client.view.list(name).include?(name).should be_true
-          expect(
-            lambda { @client.view.create(name, "listview") }
-          ).to raise_error(JenkinsApi::Exceptions::ViewAlreadyExists)
-          @valid_post_responses.should include(
-            @client.view.delete(name).to_i
-          )
         end
       end
 
@@ -100,13 +68,9 @@ describe JenkinsApi::Client::View do
 
         def test_and_validate(params)
           name = params[:name]
-          @valid_post_responses.should include(
-            @client.view.create_list_view(params).to_i
-          )
+          @client.view.create_list_view(params).to_i.should == 302
           @client.view.list(name).include?(name).should be_true
-          @valid_post_responses.should include(
-            @client.view.delete(name).to_i
-          )
+          @client.view.delete(name).to_i.should == 302
           @client.view.list(name).include?(name).should be_false
         end
 
@@ -148,34 +112,16 @@ describe JenkinsApi::Client::View do
           }
           test_and_validate(params)
         end
-        it "raises an error when the input parameters is not a Hash" do
-          expect(
-            lambda {
-              @client.view.create_list_view("a_string")
-            }
-          ).to raise_error(ArgumentError)
-        end
-        it "raises an error when the required name paremeter is missing" do
-          expect(
-            lambda {
-              @client.view.create_list_view(:description => "awesomeview")
-            }
-          ).to raise_error(ArgumentError)
-        end
       end
 
       describe "#delete" do
         name = "test_view_to_delete"
         before(:all) do
-          @valid_post_responses.should include(
-            @client.view.create(name).to_i
-          )
+          @client.view.create(name).to_i.should == 302
         end
         it "accepts the name of the view and deletes from Jenkins" do
           @client.view.list(name).include?(name).should be_true
-          @valid_post_responses.should include(
-            @client.view.delete(name).to_i
-          )
+          @client.view.delete(name).to_i.should == 302
           @client.view.list(name).include?(name).should be_false
         end
       end
@@ -194,19 +140,15 @@ describe JenkinsApi::Client::View do
 
       describe "#add_job" do
         before(:all) do
-          @valid_post_responses.should include(
-            @client.job.create_freestyle(
-              :name => "test_job_for_view"
-            ).to_i
-          )
+          @client.job.create_freestyle(
+            :name => "test_job_for_view"
+          ).to_i.should == 200
         end
         it "accepts the job and and adds it to the specified view" do
-          @valid_post_responses.should include(
-            @client.view.add_job(
-              "general_purpose_view",
-              "test_job_for_view"
-            ).to_i
-          )
+          @client.view.add_job(
+            "general_purpose_view",
+            "test_job_for_view"
+          ).to_i.should == 200
           @client.view.list_jobs(
             "general_purpose_view"
           ).include?("test_job_for_view").should be_true
@@ -216,29 +158,23 @@ describe JenkinsApi::Client::View do
       describe "#remove_job" do
         before(:all) do
           unless @client.job.exists?("test_job_for_view")
-            @valid_post_responses.should include(
-              @client.job.create_freestyle(
-                :name => "test_job_for_view"
-              ).to_i
-            )
+            @client.job.create_freestyle(
+              :name => "test_job_for_view"
+            ).to_i.should == 200
           end
           unless @client.view.list_jobs(
             "general_purpose_view").include?("test_job_for_view")
-            @valid_post_responses.should include(
-              @client.view.add_job(
-                "general_purpose_job",
-                "test_job_for_view"
-              ).to_i
-            )
+            @client.view.add_job(
+              "general_purpose_job",
+              "test_job_for_view"
+            ).to_i.should == 200
           end
         end
         it "accepts the job name and removes it from the specified view" do
-          @valid_post_responses.should include(
-            @client.view.remove_job(
-              "general_purpose_view",
-              "test_job_for_view"
-            ).to_i
-          )
+          @client.view.remove_job(
+            "general_purpose_view",
+            "test_job_for_view"
+          ).to_i.should == 200
         end
       end
 
@@ -263,14 +199,11 @@ describe JenkinsApi::Client::View do
     end
 
     after(:all) do
-      @valid_post_responses.should include(
-        @client.view.delete("general_purpose_view").to_i
-      )
+      @client.view.delete("general_purpose_view").to_i.should == 302
       if @client.job.exists?("test_job_for_view")
-        @valid_post_responses.should include(
-          @client.job.delete("test_job_for_view").to_i
-        )
+        @client.job.delete("test_job_for_view").to_i.should == 302
       end
     end
+
   end
 end

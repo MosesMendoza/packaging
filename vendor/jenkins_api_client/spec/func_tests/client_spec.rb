@@ -27,6 +27,13 @@ describe JenkinsApi::Client do
 
     describe "InstanceMethods" do
 
+      describe "#debug" do
+        it "Should be able to toggle the debug value" do
+          value = @client.debug
+          @client.toggle_debug.should_not == value
+        end
+      end
+
       describe "#initialize" do
         it "Should be able to initialize with valid credentials" do
           client1 = JenkinsApi::Client.new(
@@ -43,15 +50,14 @@ describe JenkinsApi::Client do
         end
 
         it "Should fail if wrong credentials are given" do
-          client2 = JenkinsApi::Client.new(
-            :server_ip => @server_ip,
-            :username => 'stranger',
-            :password => 'hacked',
-            :log_location => '/dev/null'
-          )
-          expect(
-            lambda { client2.job.list_all }
-          ).to raise_error(JenkinsApi::Exceptions::Unauthorized)
+          begin
+            client2 = JenkinsApi::Client.new(:server_ip => @server_ip,
+                                             :username => 'stranger',
+                                             :password => 'hacked')
+            client2.job.list_all
+          rescue Exception => e
+            e.class.should == JenkinsApi::Exceptions::UnautherizedException
+          end
         end
       end
       describe "#get_jenkins_version" do
