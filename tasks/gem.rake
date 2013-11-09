@@ -69,19 +69,20 @@ if @build.build_gem
     spec
   end
 
-  def create_gem(spec)
+  def create_gem(spec, gembuilddir)
     gem_task = Gem::PackageTask.new(spec)
     bench = Benchmark.realtime do
       gem_task.define
+      Rake::Task[:gem].reenable
       Rake::Task[:gem].invoke
-      rm_rf "pkg/#{@build.project}-#{@build.gemversion}"
+      rm_r File.join("pkg", gembuilddir)
     end
     puts "Finished building in: #{bench}"
   end
 
   def create_default_gem
     spec = create_default_gem_spec
-    create_gem(spec)
+    create_gem(spec, "#{@build.project}-#{@build.gemversion}")
   end
 
   def create_platform_specific_gems
@@ -101,7 +102,7 @@ if @build.build_gem
           spec = add_gem_dependency(:spec => spec, :gem => gem, :version => version, :type => t)
         end
       end
-      create_gem(spec)
+      create_gem(spec, "#{@build.project}-#{@build.gemversion}-#{platform}")
     end
   end
 
