@@ -11,7 +11,6 @@ PACKAGING_PATH = File.join(File.dirname(__FILE__), 'tasks')
 @using_loader = true
 
 [ '00_utils.rake',
-  '10_setupvars.rake',
   '20_setupextravars.rake',
   '30_metrics.rake',
   'apple.rake',
