@@ -11,7 +11,6 @@ PACKAGING_PATH = File.join(File.dirname(__FILE__), 'tasks')
 @using_loader = true
 
 [ '00_utils.rake',
-  '20_setupextravars.rake',
   '30_metrics.rake',
   'apple.rake',
   'build.rake',
@@ -24,6 +23,7 @@ PACKAGING_PATH = File.join(File.dirname(__FILE__), 'tasks')
   'ips.rake',
   'jenkins.rake',
   'jenkins_dynamic.rake',
+  'load_extras.rake',
   'mock.rake',
   'pe_deb.rake',
   'pe_remote.rake',
@@ -40,7 +40,6 @@ PACKAGING_PATH = File.join(File.dirname(__FILE__), 'tasks')
   'sign.rake',
   'tag.rake',
   'tar.rake',
-  'template.rake',
   'update.rake',
   'vendor_gems.rake',
   'version.rake',
