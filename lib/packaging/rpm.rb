@@ -21,7 +21,7 @@ module Pkg
 
     def template_spec(spec_template, workdir)
       spec = File.basename(spec_template.sub(File.extname(spec_template), ""))
-      Pkg::Util::File.erb_file(spec_template, File.join(workdir, "SPECS", spec), :remove_orig => false, :binding => Pkg::Util.get_binding)
+      Pkg::Util::File.erb_file(spec_template, File.join(workdir, "SPECS", spec), nil, :binding => Pkg::Util.get_binding)
     end
 
     def pkg!(tarball)
