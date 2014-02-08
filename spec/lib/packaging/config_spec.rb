@@ -1,10 +1,9 @@
 # -*- ruby -*-
 require 'spec_helper'
-load File.join(SPECDIR, '..', 'lib', 'packaging.rb')
-
 require 'yaml'
 
-describe Pkg::Config do
+describe "Pkg::Config" do
+
   Build_Params = [:apt_host,
                   :apt_repo_path,
                   :apt_repo_url,
@@ -164,12 +163,54 @@ describe Pkg::Config do
 
   describe "#config_to_yaml" do
     it "should write a valid yaml file" do
-      file = mock('file')
+      file = double('file')
       File.should_receive(:open).with(anything(), 'w').and_yield(file)
       file.should_receive(:puts).with(instance_of(String))
       YAML.should_receive(:load_file).with(file)
       expect { YAML.load_file(file) }.to_not raise_error
       Pkg::Config.config_to_yaml
+    end
+  end
+
+  describe "#get_binding" do
+    it "should return the binding of the Pkg::Config object" do
+      # test by eval'ing using the binding before and after setting a param
+      orig = Pkg::Config.apt_host
+      Pkg::Config.apt_host = "foo"
+      expect(eval("@apt_host", Pkg::Config.get_binding)).to eq("foo")
+      Pkg::Config.apt_host = "bar"
+      expect(eval("@apt_host", Pkg::Config.get_binding)).to eq("bar")
+      Pkg::Config.apt_host = orig
+    end
+  end
+
+  describe "#config_from_yaml" do
+    it "should, given a yaml file, use it to set params" do
+      # apt_host: is set to "foo" in the fixture
+      orig = Pkg::Config.apt_host
+      Pkg::Config.apt_host = "bar"
+      Pkg::Config.config_from_yaml(File.join(SPECDIR, 'fixtures', 'config', 'params.yaml'))
+      expect(Pkg::Config.apt_host).to eq("foo")
+      Pkg::Config.apt_host = orig
+    end
+  end
+
+  describe "#config" do
+    it "should call Pkg::Config.config_to_hash if given :format => :hash" do
+      expect(Pkg::Config).to receive(:config_to_hash)
+      Pkg::Config.config(:target => nil, :format => :hash)
+    end
+
+    it "should call Pkg::Config.config_to_yaml if given :format => :yaml" do
+      expect(Pkg::Config).to receive(:config_to_yaml)
+      Pkg::Config.config(:target => nil, :format => :yaml)
+    end
+  end
+
+  describe "#config_to_hash" do
+    it "should return a hash object" do
+      hash = Pkg::Config.config_to_hash
+      hash.should be_a(Hash)
     end
   end
 end
