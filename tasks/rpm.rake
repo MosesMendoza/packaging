@@ -8,7 +8,7 @@ def prep_rpm_build_dir
   # ext/redhat/<project>.spec.erb. If that doesn't exist, we fail. To do this,
   # we have to open the tarball.
   cp_p("pkg/#{tarball}", temp)
-  if ex(%Q[tar -tzf #{File.join(temp, tarball)}]).split.grep(/ext\/redhat\/#{Pkg::Config.project}.spec$/)
+  if %x(tar -tzf #{File.join(temp, tarball)}).split.grep(/ext\/redhat\/#{Pkg::Config.project}.spec$/)
     sh "tar -C #{temp} -xzf #{File.join(temp, tarball)} #{Pkg::Config.project}-#{Pkg::Config.version}/ext/redhat/#{Pkg::Config.project}.spec"
     cp("#{temp}/#{Pkg::Config.project}-#{Pkg::Config.version}/ext/redhat/#{Pkg::Config.project}.spec", "#{temp}/SPECS/")
   elsif File.exists?("ext/redhat/#{Pkg::Config.project}.spec.erb")
